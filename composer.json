@@ -1,0 +1,9 @@
+{
+    "name": "drupal/commerce_decoupled_stripe",
+    "description": "Provides Commerce integration for Stripe.",
+    "type": "drupal-module",
+    "license": "GPL-2.0",
+    "require": {
+        "stripe/stripe-php": "^6.40"
+    }
+}
