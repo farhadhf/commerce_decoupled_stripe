@@ -220,6 +220,17 @@ class StripeRecurringGateway extends StripeGatewayBase implements SupportsAuthor
     if ($day_of_month >= $recurring_start_day) {
       $datetime->modify('+1 month');
     }
+
+    // This is needed to prevent cases like adding 1 month to 31rd of
+    // October results in 1st of December instead of 30th of November.
+    // See https://stackoverflow.com/questions/5760262/php-adding-months-to-a-date-while-not-exceeding-the-last-day-of-the-month
+    // for example of the issue.
+    $end_day_of_month = $datetime->format('j');
+    if ($day_of_month != $end_day_of_month) {
+      // The day of the month isn't the same anymore, so we correct the date.
+      $datetime->modify('last day of last month');
+    }
+
     $date_string = $datetime->format('Y') . '-' . $datetime->format('m') . '-' . $recurring_start_day . ' 11:00';
 
     return strtotime($date_string);
