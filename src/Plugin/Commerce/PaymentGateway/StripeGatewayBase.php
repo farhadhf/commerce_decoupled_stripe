@@ -96,6 +96,35 @@ abstract class StripeGatewayBase extends OnsitePaymentGatewayBase implements Sup
     $email = $owner->getEmail();
     $stripe_customer_id = NULL;
 
+    $customer_name = '';
+    $customer_address = [];
+    if ($billing_address = $payment_method->getBillingProfile()) {
+      $billing_address = $payment_method->getBillingProfile()->get('address')->first();
+      if (!empty($billing_address)) {
+        $customer_name = trim($billing_address->getGivenName() . ' ' . $billing_address->getFamilyName());
+        $customer_address = [
+          'line1' => $billing_address->getAddressLine1(),
+          'line2' => $billing_address->getAddressLine2(),
+          'city' => $billing_address->getLocality(),
+          'country' => $billing_address->getCountryCode(),
+          'state' => $billing_address->getAdministrativeArea(),
+        ];
+        if ($billing_address->getPostalCode()) {
+          $customer_address['postal_code'] = $billing_address->getPostalCode();
+        }
+      }
+    }
+
+    $customer_payload = [
+      'name' => $customer_name,
+      'metadata' => [
+        'commerce_decoupled_stripe' => 1,
+      ],
+    ];
+    if (!empty($customer_address)) {
+      $customer_payload['address'] = $customer_address;
+    }
+
     // Try to find existing Stripe customer.
     try {
       $customer = Customer::all(['limit' => 1, 'email' => $email]);
@@ -106,23 +135,15 @@ abstract class StripeGatewayBase extends OnsitePaymentGatewayBase implements Sup
     }
     if (!empty($customer) && !empty($customer->data)) {
       $stripe_customer_id = $customer->data[0]->id;
+      Customer::update($stripe_customer_id, $customer_payload);
     }
     else {
+      $customer_payload['email'] = $email;
       // Create a new customer in Stripe.
-      $customer_name = '';
-      if ($billing_address = $payment_method->getBillingProfile()) {
-        $billing_address = $payment_method->getBillingProfile()->get('address')->first();
-        if (!empty($billing_address)) {
-          $customer_name = trim($billing_address->getGivenName() . ' ' . $billing_address->getFamilyName());
-        }
+      $customer = Customer::create($customer_payload);
+      if ($customer_address) {
+        $customer['address'] = $customer_address;
       }
-      $customer = Customer::create([
-        'email' => $email,
-        'name' => $customer_name,
-        'metadata' => [
-          'commerce_decoupled_stripe' => 1,
-        ],
-      ]);
       $stripe_customer_id = $customer->id;
     }
 
