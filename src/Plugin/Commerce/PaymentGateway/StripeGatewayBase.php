@@ -102,13 +102,15 @@ abstract class StripeGatewayBase extends OnsitePaymentGatewayBase implements Sup
       $billing_address = $payment_method->getBillingProfile()->get('address')->first();
       if (!empty($billing_address)) {
         $customer_name = trim($billing_address->getGivenName() . ' ' . $billing_address->getFamilyName());
-        $customer_address = [
-          'line1' => $billing_address->getAddressLine1(),
-          'line2' => $billing_address->getAddressLine2(),
-          'city' => $billing_address->getLocality(),
-          'country' => $billing_address->getCountryCode(),
-          'state' => $billing_address->getAdministrativeArea(),
-        ];
+        if (!empty($billing_address->getAddressLine1())) {
+          $customer_address = [
+            'line1' => $billing_address->getAddressLine1(),
+            'line2' => $billing_address->getAddressLine2(),
+            'city' => $billing_address->getLocality(),
+            'country' => $billing_address->getCountryCode(),
+            'state' => $billing_address->getAdministrativeArea(),
+          ];
+        }
         if ($billing_address->getPostalCode()) {
           $customer_address['postal_code'] = $billing_address->getPostalCode();
         }
