@@ -68,6 +68,9 @@ class StripeGateway extends StripeGatewayBase implements SupportsAuthorizationsI
     $payment->save();
     // Save intent id on payment method level for backend use only.
     $payment_method->setRemoteId($intent->id);
+    // Set fake card type to avoid issue during viewing order with undefined card type.
+    // Card type will be overwritten with real value if payment will be success.
+    $payment_method->card_type = 'visa';
     $payment_method->save();
   }
 
