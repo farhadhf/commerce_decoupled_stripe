@@ -106,6 +106,7 @@ class StripeRecurringGateway extends StripeGatewayBase implements SupportsAuthor
       'payment_method_types' => ['card'],
       'metadata' => [
         'order_id' => $payment->getOrderId(),
+        'payment_gateway' => $payment->getPaymentGateway()->label(),
       ],
       'usage' => 'off_session',
     ];
