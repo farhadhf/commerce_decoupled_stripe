@@ -155,6 +155,7 @@ class StripeRecurringGateway extends StripeGatewayBase implements SupportsAuthor
       'metadata' => [
         'commerce_decoupled_stripe' => 1,
         'order_id' => $payment->getOrderId(),
+        'drupal_payment_gateway' => $payment->getPaymentGateway()->label(),
       ],
       // Set payment method explicitly, otherwise Stripe may use another card
       // attached to this customer previously.
