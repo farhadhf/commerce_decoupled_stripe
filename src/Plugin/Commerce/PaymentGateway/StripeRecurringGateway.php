@@ -29,10 +29,10 @@ class StripeRecurringGateway extends StripeGatewayBase implements SupportsAuthor
    */
   public function defaultConfiguration() {
     return [
-      'recurring_start_day' => '2',
-      'recurring_plan_id' => 'commerce_decoupled_stripe_monthly',
-      'recurring_plan_name' => 'Monthly donation',
-    ] + parent::defaultConfiguration();
+        'recurring_start_day' => '2',
+        'recurring_plan_id' => 'commerce_decoupled_stripe_monthly',
+        'recurring_plan_name' => 'Monthly donation',
+      ] + parent::defaultConfiguration();
   }
 
   /**
@@ -130,9 +130,32 @@ class StripeRecurringGateway extends StripeGatewayBase implements SupportsAuthor
     $this->assertPaymentMethod($payment_method);
 
     $intent = SetupIntent::retrieve($payment_method->getRemoteId());
-    // Ensure the setup intent is successful.
-    if ($intent->status !== SetupIntent::STATUS_SUCCEEDED) {
-      throw new DeclineException('The setup intent is in incorrect state.');
+    if ($intent->status == SetupIntent::STATUS_CANCELED) {
+      $payment->setState('authorization_voided');
+      $payment->save();
+
+      throw new DeclineException('The recurring payment has been cancelled.');
+    }
+    elseif ($intent->status !== SetupIntent::STATUS_SUCCEEDED) {
+
+      // If payment is not yet successful in Stripe, we give it a day
+      // to complete. All sessions older than 24h are automatically expired
+      // by Stripe and therefore can't be completed, so we cancel them.
+      $one_day_ago = strtotime('-1 day');
+      if ($payment_method->getCreatedTime() < $one_day_ago) {
+        $payment->setState('authorization_expired');
+        $payment->save();
+
+        throw new DeclineException('The recurring payment has expired.');
+      }
+      else {
+        // Change state to authorization so that we demonstrate that
+        // the auth / payment process is still ongoing.
+        $payment->setState('authorization');
+        $payment->save();
+
+        throw new DeclineException('The recurring payment is not (yet) succeeded.');
+      }
     }
 
     // Associate payment method with current customer in Stripe.
