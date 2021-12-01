@@ -130,7 +130,10 @@ class StripeRecurringGateway extends StripeGatewayBase implements SupportsAuthor
     $this->assertPaymentMethod($payment_method);
 
     $intent = SetupIntent::retrieve($payment_method->getRemoteId());
-    if ($intent->status == SetupIntent::STATUS_CANCELED) {
+    if (
+      $intent->status == SetupIntent::STATUS_CANCELED
+      || $intent->status == SetupIntent::STATUS_REQUIRES_PAYMENT_METHOD
+    ) {
       $payment->setState('authorization_voided');
       $payment->save();
 

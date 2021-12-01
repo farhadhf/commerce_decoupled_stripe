@@ -85,7 +85,10 @@ class StripeGateway extends StripeGatewayBase implements SupportsAuthorizationsI
     // Load the intent and ensure it's successful.
     $intent = PaymentIntent::retrieve($payment_method->getRemoteId());
 
-    if ($intent->status == PaymentIntent::STATUS_CANCELED) {
+    if (
+      $intent->status == PaymentIntent::STATUS_CANCELED
+      || $intent->status == PaymentIntent::STATUS_REQUIRES_PAYMENT_METHOD
+    ) {
       $payment->setState('authorization_voided');
       $payment->save();
 
