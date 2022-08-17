@@ -36,7 +36,7 @@ class StripeGateway extends StripeGatewayBase implements SupportsAuthorizationsI
 
     $order_id = $payment->getOrderId();
     $order = $payment->getOrder();
-    $amount = \Drupal::service('commerce_price.minor_units_converter')->toMinorUnits($payment->getAmount());
+    $amount = $this->toMinorUnits($payment->getAmount());
 
     // Create payment intent in Stripe and prepare client secret to process
     // this intent on frontend.
