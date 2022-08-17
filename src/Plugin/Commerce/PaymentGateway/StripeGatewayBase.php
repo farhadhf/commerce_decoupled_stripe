@@ -9,6 +9,8 @@ use Drupal\commerce_payment\PaymentMethodTypeManager;
 use Drupal\commerce_payment\PaymentTypeManager;
 use Drupal\commerce_payment\Plugin\Commerce\PaymentGateway\OnsitePaymentGatewayBase;
 use Drupal\commerce_payment\Plugin\Commerce\PaymentGateway\SupportsAuthorizationsInterface;
+use Drupal\commerce_price\Calculator;
+use Drupal\commerce_price\Price;
 use Drupal\Component\Datetime\TimeInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormStateInterface;
@@ -19,6 +21,12 @@ use Stripe\Stripe;
  * Provides base methods for Decoupled Stripe gateways.
  */
 abstract class StripeGatewayBase extends OnsitePaymentGatewayBase implements SupportsAuthorizationsInterface {
+
+  /**
+   * List of zero decimal currencies to convert amount correctly for Stripe API.
+   * https://stripe.com/docs/currencies#zero-decimal
+   */
+  const ZERO_DECIMAL_CURRENCIES = ['BIF', 'CLP', 'DJF', 'GNF', 'JPY', 'KMF', 'KRW', 'MGA', 'PYG', 'RWF', 'UGX', 'VND', 'VUV', 'XAF', 'XOF', 'XPF'];
 
   /**
    * {@inheritdoc}
@@ -171,6 +179,22 @@ abstract class StripeGatewayBase extends OnsitePaymentGatewayBase implements Sup
   public function voidPayment(PaymentInterface $payment) {
     // TODO: Implement voidPayment() method.
     throw new HardDeclineException('The method is not implemented yet.');
+  }
+
+  /**
+   * Convert amount to minor units of specific currency according to Stripe.
+   *
+   * Stripe currencies could be different to Drupal currencies, so use constant lists from:
+   * https://stripe.com/docs/currencies#zero-decimal
+   */
+  public function toMinorUnits(Price $amount) {
+    $fraction_digits = in_array($amount->getCurrencyCode(), self::ZERO_DECIMAL_CURRENCIES) ? 0 : 2;
+    $number = $amount->getNumber();
+    if ($fraction_digits > 0) {
+      $number = Calculator::multiply($number, pow(10, $fraction_digits));
+    }
+
+    return round($number, 0);
   }
 
 }
