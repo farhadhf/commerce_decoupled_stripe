@@ -2,7 +2,7 @@ name: Commerce Decoupled Stripe
 type: module
 description: 'Integrates Stripe with Commerce Decoupled Checkout.'
 core: 8.x
-core_version_requirement: ^8 || ^9
+core_version_requirement: ^8 || ^9 || ^10
 package: Commerce (contrib)
 dependencies:
   - commerce:commerce_payment
