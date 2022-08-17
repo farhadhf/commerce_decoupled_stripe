@@ -102,6 +102,11 @@ abstract class StripeGatewayBase extends OnsitePaymentGatewayBase implements Sup
   public function createPaymentMethod(PaymentMethodInterface $payment_method, array $payment_details) {
     $owner = $payment_method->getOwner();
     $email = $owner->getEmail();
+    // If anonymous do not create customer.
+    if (!$email) {
+      return;
+    }
+
     $stripe_customer_id = NULL;
 
     $customer_name = '';

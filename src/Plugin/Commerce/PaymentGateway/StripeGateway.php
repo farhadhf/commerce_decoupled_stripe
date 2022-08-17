@@ -48,6 +48,7 @@ class StripeGateway extends StripeGatewayBase implements SupportsAuthorizationsI
         'order_id' => $order_id,
         'payment_gateway' => $payment->getPaymentGateway()->label(),
       ],
+      'receipt_email' => $order->getEmail(),
       // Let Stripe to capture funds automatically.
       'capture_method' => 'automatic',
     ];
