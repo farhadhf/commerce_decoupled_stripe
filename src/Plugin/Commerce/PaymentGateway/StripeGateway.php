@@ -6,6 +6,7 @@ use Drupal\commerce_payment\Entity\PaymentInterface;
 use Drupal\commerce_payment\Exception\DeclineException;
 use Drupal\commerce_payment\Plugin\Commerce\PaymentGateway\SupportsAuthorizationsInterface;
 use Drupal\commerce_price\Price;
+use Drupal\Core\Form\FormStateInterface;
 use Stripe\PaymentIntent;
 
 /**
@@ -19,6 +20,30 @@ use Stripe\PaymentIntent;
  * )
  */
 class StripeGateway extends StripeGatewayBase implements SupportsAuthorizationsInterface {
+
+  /**
+   * {@inheritdoc}
+   */
+  public function defaultConfiguration() {
+    return [
+        'enable_receipt_email' => FALSE,
+      ] + parent::defaultConfiguration();
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function buildConfigurationForm(array $form, FormStateInterface $form_state) {
+    $form = parent::buildConfigurationForm($form, $form_state);
+
+    $form['enable_receipt_email'] = [
+      '#type' => 'checkbox',
+      '#title' => t('Force enable Stripe email receipts on successful payment.'),
+      '#default_value' => $this->configuration['enable_receipt_email'],
+    ];
+
+    return $form;
+  }
 
   /**
    * {@inheritdoc}
@@ -48,10 +73,14 @@ class StripeGateway extends StripeGatewayBase implements SupportsAuthorizationsI
         'order_id' => $order_id,
         'payment_gateway' => $payment->getPaymentGateway()->label(),
       ],
-      'receipt_email' => $order->getEmail(),
       // Let Stripe to capture funds automatically.
       'capture_method' => 'automatic',
     ];
+
+    if (!empty($this->configuration['enable_receipt_email'])) {
+      $intent_array['receipt_email'] = $order->getEmail();
+    }
+
     if (!empty($payment_method->stripe_customer_id)) {
       // If customer is not provided, Stripe will create new one.
       $intent_array['customer'] = $payment_method->stripe_customer_id;
@@ -138,8 +167,7 @@ class StripeGateway extends StripeGatewayBase implements SupportsAuthorizationsI
 
     // Finalize the payment.
     $payment->setState('completed');
-    $payment_method->setRemoteId($intent->id);
+    $payment->setRemoteId($intent->id);
     $payment->save();
   }
-
 }

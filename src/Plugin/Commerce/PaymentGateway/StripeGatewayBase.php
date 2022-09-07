@@ -4,7 +4,7 @@ namespace Drupal\commerce_decoupled_stripe\Plugin\Commerce\PaymentGateway;
 
 use Drupal\commerce_payment\Entity\PaymentInterface;
 use Drupal\commerce_payment\Entity\PaymentMethodInterface;
-use Drupal\commerce_payment\Exception\HardDeclineException;
+use Drupal\commerce_payment\Exception\PaymentGatewayException;
 use Drupal\commerce_payment\PaymentMethodTypeManager;
 use Drupal\commerce_payment\PaymentTypeManager;
 use Drupal\commerce_payment\Plugin\Commerce\PaymentGateway\OnsitePaymentGatewayBase;
@@ -15,6 +15,8 @@ use Drupal\Component\Datetime\TimeInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Stripe\Customer;
+use Stripe\PaymentIntent;
+use Stripe\SetupIntent;
 use Stripe\Stripe;
 
 /**
@@ -182,8 +184,29 @@ abstract class StripeGatewayBase extends OnsitePaymentGatewayBase implements Sup
    * {@inheritdoc}
    */
   public function voidPayment(PaymentInterface $payment) {
-    // TODO: Implement voidPayment() method.
-    throw new HardDeclineException('The method is not implemented yet.');
+    $payment_method = $payment->getPaymentMethod();
+    $intent_id = $payment_method->getRemoteId();
+    if ($payment->getPaymentGateway()->getPluginId() == 'decoupled_stripe_recurring') {
+      $intent = SetupIntent::retrieve($intent_id);
+    }
+    else {
+      $intent = PaymentIntent::retrieve($intent_id);
+    }
+
+    // Same voiding check as in drupal/stripe module.
+    $statuses_to_void = [
+      'requires_payment_method',
+      'requires_capture',
+      'requires_confirmation',
+      'requires_action',
+    ];
+    if (!in_array($intent->status, $statuses_to_void)) {
+      throw new PaymentGatewayException('The PaymentIntent cannot be voided.');
+    }
+    $intent->cancel();
+    $payment->setRemoteId($intent_id);
+    $payment->setState('authorization_voided');
+    $payment->save();
   }
 
   /**
