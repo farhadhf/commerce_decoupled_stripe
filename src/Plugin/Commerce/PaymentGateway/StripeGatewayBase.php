@@ -166,6 +166,15 @@ abstract class StripeGatewayBase extends OnsitePaymentGatewayBase implements Sup
 
     // Current implementation doesn't support reusable Commerce payment methods.
     $payment_method->setReusable(FALSE);
+
+    if (empty($payment_details['card_type'])) {
+      // Card Type should be set to prevent error in
+      // \Drupal\commerce_payment\Plugin\Commerce\PaymentMethodType::buildLabel()
+      // This gets overridden later when the payment is being captured.
+      // @See https://www.drupal.org/project/commerce_decoupled_checkout/issues/3114285
+      $payment_details['card_type'] = 'visa';
+    }
+    $payment_method->set('card_type', $payment_details['card_type']);
     $payment_method->save();
 
     // Save in payment method object for further processing.
